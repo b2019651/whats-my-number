@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>證號管理系統</title>
+    <!-- Bootstrap 5 CSS CDN -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons CDN -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .card {
+        transition: all 0.3s;
+      }
+      .card:hover {
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body class="bg-light">
+    <div class="container py-4">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <!-- 頁面標題 -->
+          <div class="text-center mb-4">
+            <h1 class="display-5 fw-bold text-primary">
+              <i class="bi bi-shield-lock"></i> 證號管理系統
+            </h1>
+            <p class="text-muted">實時更新及管理用戶證號</p>
+          </div>
+
+          <!-- 輸入表單 -->
+          <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-5">
+                  <div class="form-floating">
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="name"
+                      placeholder="輸入姓名"
+                    />
+                    <label for="name">姓名</label>
+                  </div>
+                </div>
+                <div class="col-md-5">
+                  <div class="form-floating">
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="number"
+                      placeholder="輸入證號"
+                    />
+                    <label for="number">證號</label>
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <button
+                    onclick="submitNumber()"
+                    class="btn btn-primary h-100 w-100"
+                  >
+                    <i class="bi bi-plus-circle me-1"></i>提交
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 用戶列表 -->
+          <div class="card shadow-sm">
+            <div class="card-header bg-white">
+              <h5 class="card-title mb-0">
+                <i class="bi bi-people"></i> 用戶證號列表
+              </h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush" id="user-list">
+                <!-- 用戶列表將會顯示在這裡 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 連接狀態指示器 -->
+          <div class="mt-3 text-center">
+            <span class="badge bg-secondary" id="connection-status"
+              >連接中...</span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle with Popper -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // 連線 WebSocket 伺服器 - 使用與網頁相同的主機和端口
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const socketUrl = `${protocol}//${window.location.host}`;
+      const socket = new WebSocket(socketUrl);
+      const connectionStatus = document.getElementById("connection-status");
+
+      // 連接建立時
+      socket.addEventListener("open", (event) => {
+        connectionStatus.textContent = "已連接";
+        connectionStatus.classList.remove("bg-secondary");
+        connectionStatus.classList.add("bg-success");
+      });
+
+      // 連接關閉時
+      socket.addEventListener("close", (event) => {
+        connectionStatus.textContent = "連接已斷開";
+        connectionStatus.classList.remove("bg-success", "bg-secondary");
+        connectionStatus.classList.add("bg-danger");
+      });
+
+      // 連接錯誤時
+      socket.addEventListener("error", (event) => {
+        connectionStatus.textContent = "連接錯誤";
+        connectionStatus.classList.remove("bg-success", "bg-secondary");
+        connectionStatus.classList.add("bg-danger");
+      });
+
+      // 當伺服器傳送數據時，更新用戶列表
+      socket.addEventListener("message", (event) => {
+        const users = JSON.parse(event.data);
+        updateUserList(users);
+      });
+
+      // 提交新證號
+      function submitNumber() {
+        const name = document.getElementById("name").value;
+        const number = document.getElementById("number").value;
+
+        // 檢查姓名和證號是否有效
+        if (name && number) {
+          socket.send(JSON.stringify({ name, number }));
+
+          // 清空輸入框
+          document.getElementById("name").value = "";
+          document.getElementById("number").value = "";
+
+          // 顯示提交成功的吐司通知
+          showToast("資料已提交");
+        } else {
+          showToast("請填寫完整的姓名和證號", "bg-danger");
+        }
+      }
+
+      // 更新用戶列表的顯示
+      function updateUserList(users) {
+        const userListDiv = document.getElementById("user-list");
+        userListDiv.innerHTML = ""; // 清空現有列表
+
+        if (users.length === 0) {
+          const emptyMessage = document.createElement("div");
+          emptyMessage.className = "list-group-item text-center text-muted";
+          emptyMessage.innerHTML = "暫無用戶資料";
+          userListDiv.appendChild(emptyMessage);
+          return;
+        }
+
+        users.forEach((user, index) => {
+          const userItem = document.createElement("div");
+          userItem.className = "list-group-item";
+
+          const itemContent = `
+            <div class="row align-items-center">
+              <div class="col-md-4">
+                <span class="fw-bold">${user.name}</span>
+              </div>
+              <div class="col-md-6">
+                <div class="input-group">
+                  <input type="text" class="form-control" value="${user.number}"
+                         id="number-${index}" aria-label="證號"
+                         onchange="updateNumber('${user.name}', this.value)">
+                  <button class="btn btn-outline-secondary" type="button"
+                          onclick="copyToClipboard('number-${index}')">
+                    <i class="bi bi-clipboard"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="col-md-2 text-end">
+                <button class="btn btn-sm btn-outline-danger"
+                        onclick="deleteUser('${user.name}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
+
+          userItem.innerHTML = itemContent;
+          userListDiv.appendChild(userItem);
+        });
+      }
+
+      // 當用戶修改自己的證號時，發送到伺服器
+      function updateNumber(name, number) {
+        socket.send(JSON.stringify({ name, number }));
+        showToast("證號已更新");
+      }
+
+      // 刪除用戶（需要後端支持）
+      function deleteUser(name) {
+        if (confirm(`確定要刪除 ${name} 的資料嗎？`)) {
+          socket.send(JSON.stringify({ action: "delete", name }));
+          showToast("用戶已刪除");
+        }
+      }
+
+      // 複製到剪貼板功能
+      function copyToClipboard(elementId) {
+        const element = document.getElementById(elementId);
+        element.select();
+        document.execCommand("copy");
+        showToast("已複製到剪貼板");
+      }
+
+      // 動態創建吐司通知
+      function showToast(message, bgClass = "bg-success") {
+        // 創建吐司元素
+        const toastContainer = document.createElement("div");
+        toastContainer.className = "position-fixed bottom-0 end-0 p-3";
+        toastContainer.style.zIndex = "5";
+
+        const toast = document.createElement("div");
+        toast.className = `toast ${bgClass} text-white`;
+        toast.setAttribute("role", "alert");
+        toast.setAttribute("aria-live", "assertive");
+        toast.setAttribute("aria-atomic", "true");
+
+        toast.innerHTML = `
+          <div class="toast-body">
+            ${message}
+          </div>
+        `;
+
+        toastContainer.appendChild(toast);
+        document.body.appendChild(toastContainer);
+
+        // 顯示吐司
+        const bsToast = new bootstrap.Toast(toast, { delay: 2000 });
+        bsToast.show();
+
+        // 吐司關閉後移除元素
+        toast.addEventListener("hidden.bs.toast", () => {
+          document.body.removeChild(toastContainer);
+        });
+      }
+    </script>
+
+    <!-- 吐司通知容器 -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">
+      <!-- 吐司會動態插入到這裡 -->
+    </div>
+  </body>
+</html>
