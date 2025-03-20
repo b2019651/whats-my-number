@@ -113,6 +113,4 @@ server.listen(PORT, () => {
 process.on("SIGINT", async () => {
   console.log("應用關閉中");
   await client.end();
-  console.log("已關閉");
-  process.exit(0);
 });

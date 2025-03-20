@@ -114,12 +114,6 @@
         </div>
       </div>
     </div>
-    <canvas
-      id="fingerprintCanvas"
-      width="200"
-      height="200"
-      style="display: none"
-    ></canvas>
 
     <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.js"></script>
     <!-- Bootstrap 5 JS Bundle with Popper -->
@@ -160,7 +154,10 @@
       });
 
       function getCanvasFingerprint() {
-        const canvas = document.getElementById("fingerprintCanvas");
+        // 創建離屏 Canvas（不會影響現有 DOM）
+        const canvas = document.createElement("canvas");
+        canvas.width = 200; // 設置固定大小，確保結果一致
+        canvas.height = 200;
         const ctx = canvas.getContext("2d");
 
         // 設置字體、顏色和繪製文字
@@ -194,7 +191,6 @@
         const name = document.getElementById("name").value;
         const number = document.getElementById("number").value;
         const fingerprint = getCanvasFingerprint();
-
 
         // 檢查姓名和證號是否有效
         if (name && number) {
