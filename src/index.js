@@ -27,6 +27,8 @@ const client = new Client({
   ssl: { rejectUnauthorized: false },
 });
 
+client.connect();
+
 // 處理刪除用戶的功能
 function deleteUser(name) {
   const userIndex = users.findIndex((user) => user.name === name);
@@ -46,13 +48,10 @@ async function upsertDeviceProfile(uuid, user) {
   `;
 
   try {
-    await client.connect();
     await client.query(query, [uuid, user]);
     console.log("Upsert 成功");
   } catch (error) {
     console.error("Upsert 失敗", error);
-  } finally {
-    await client.end();
   }
 }
 
@@ -109,4 +108,11 @@ wss.on("connection", (ws) => {
 // 啟動服務器
 server.listen(PORT, () => {
   console.log(`伺服器已啟動，監聽 ${PORT} 端口，WebSocket端口與HTTP端口相同`);
+});
+
+process.on("SIGINT", async () => {
+  console.log("應用關閉中");
+  await client.end();
+  console.log("已關閉");
+  process.exit(0);
 });
