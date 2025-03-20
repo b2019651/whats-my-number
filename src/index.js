@@ -1,8 +1,10 @@
+require("dotenv").config();
 const WebSocket = require("ws");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
+const { Client } = require("pg");
 
 // 創建Express應用
 const app = express();
@@ -20,6 +22,11 @@ const wss = new WebSocket.Server({ server });
 // 儲存用戶及其號碼
 let users = [];
 
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
+
 // 處理刪除用戶的功能
 function deleteUser(name) {
   const userIndex = users.findIndex((user) => user.name === name);
@@ -28,6 +35,25 @@ function deleteUser(name) {
     return true;
   }
   return false;
+}
+
+async function upsertDeviceProfile(uuid, user) {
+  const query = `
+    INSERT INTO "DeviceProfiles" ("Fingerprint", "DisplayName")
+    VALUES ($1, $2)
+    ON CONFLICT ("Fingerprint") DO UPDATE
+    SET "DisplayName" = EXCLUDED."DisplayName";
+  `;
+
+  try {
+    await client.connect();
+    await client.query(query, [uuid, user]);
+    console.log("Upsert 成功");
+  } catch (error) {
+    console.error("Upsert 失敗", error);
+  } finally {
+    await client.end();
+  }
 }
 
 wss.on("connection", (ws) => {
@@ -51,7 +77,7 @@ wss.on("connection", (ws) => {
       return;
     }
 
-    const { name, number } = data;
+    const { name, number, fingerprint } = data;
     if (!name || !number) return;
 
     // 檢查該用戶是否已經存在
@@ -63,6 +89,9 @@ wss.on("connection", (ws) => {
       // 新用戶，加入名單
       users.push({ name, number });
     }
+
+    // UPSERT
+    upsertDeviceProfile(fingerprint, name);
 
     // 發送更新給所有已連線的用戶
     wss.clients.forEach((client) => {

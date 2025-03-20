@@ -1,15 +1,19 @@
-const CACHE_NAME = "pwa-cache-v1";
-const urlsToCache = [
-  "/",
-  "/index.html",
-  "/images/pwa-icon-512x512.png",
-];
+const CACHE_NAME = "pwa-cache-v1.0.0";
+const urlsToCache = ["/", "/index.html", "/images/pwa-icon-512x512.png"];
 
 // 安裝 Service Worker 並快取靜態資源
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache);
+      // 逐個快取資源，即使其中某些失敗也不影響其他的
+      return Promise.all(
+        urlsToCache.map((url) => {
+          return cache.add(url).catch((error) => {
+            console.error(`Failed to cache: ${url}`, error);
+            // 繼續執行，不中斷整個過程
+          });
+        })
+      );
     })
   );
 });

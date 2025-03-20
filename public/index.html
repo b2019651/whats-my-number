@@ -114,7 +114,14 @@
         </div>
       </div>
     </div>
+    <canvas
+      id="fingerprintCanvas"
+      width="200"
+      height="200"
+      style="display: none"
+    ></canvas>
 
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.js"></script>
     <!-- Bootstrap 5 JS Bundle with Popper -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
@@ -152,14 +159,46 @@
         updateUserList(users);
       });
 
+      function getCanvasFingerprint() {
+        const canvas = document.getElementById("fingerprintCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // 設置字體、顏色和繪製文字
+        ctx.textBaseline = "top";
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText("Hello, Canvas!", 10, 10);
+
+        // 繪製圖形
+        ctx.beginPath();
+        ctx.moveTo(50, 50);
+        ctx.lineTo(150, 50);
+        ctx.lineTo(100, 150);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+        ctx.fill();
+
+        // 獲取畫布的 Base64 圖像數據
+        const dataURL = canvas.toDataURL();
+
+        // 計算 Base64 字串的 MD5 雜湊值來生成指紋
+        const fingerprint = CryptoJS.MD5(dataURL)
+          .toString(CryptoJS.enc.Hex)
+          .toUpperCase();
+
+        return fingerprint;
+      }
+
       // 提交新證號
       function submitNumber() {
         const name = document.getElementById("name").value;
         const number = document.getElementById("number").value;
+        const fingerprint = getCanvasFingerprint();
+
 
         // 檢查姓名和證號是否有效
         if (name && number) {
-          socket.send(JSON.stringify({ name, number }));
+          socket.send(JSON.stringify({ name, number, fingerprint }));
 
           // 清空輸入框
           document.getElementById("name").value = "";
