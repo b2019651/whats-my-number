@@ -1,4 +1,4 @@
-const CACHE_NAME = "pwa-cache-v1.0.0";
+const CACHE_NAME = "pwa-cache-v1.0.1";
 const urlsToCache = ["/", "/index.html", "/images/pwa-icon-512x512.png"];
 
 // 安裝 Service Worker 並快取靜態資源

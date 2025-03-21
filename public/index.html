@@ -23,6 +23,51 @@
       .card:hover {
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
       }
+      .name-pad {
+        max-width: 500px;
+        margin: 0 auto;
+      }
+      .name-pad .btn {
+        height: 50px;
+        margin: 5px;
+        font-size: 1rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .number-pad {
+        max-width: 300px;
+        margin: 0 auto;
+      }
+      .number-pad .btn {
+        width: 60px;
+        height: 60px;
+        margin: 5px;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      .virtual-keyboard {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #f0f0f0;
+        padding: 10px;
+        border-top: 1px solid #ccc;
+        display: block;
+        transition: transform 0.3s ease;
+        transform: translateY(100%);
+        z-index: 1000;
+      }
+      .virtual-keyboard.active {
+        transform: translateY(0);
+      }
+      .form-content {
+        padding-bottom: 300px; /* 為按鈕盤預留空間 */
+      }
+      .search-box {
+        margin-bottom: 10px;
+      }
     </style>
   </head>
   <body class="bg-light">
@@ -42,39 +87,49 @@
             <div class="card-body">
               <div class="row g-3">
                 <div class="col-md-5">
-                  <div class="form-floating">
-                    <input
-                      type="text"
-                      class="form-control"
-                      id="name"
-                      placeholder="輸入姓名"
-                      list="people"
-                    />
-                    <label for="name">姓名</label>
-                    <datalist id="people">
-                      <option value="Alice"></option>
-                      <option value="Karen"></option>
-                      <option value="Max"></option>
-                      <option value="Lulu"></option>
-                      <option value="Kelly"></option>
-                      <option value="Jason"></option>
-                      <option value="Cindy"></option>
-                      <option value="Iverson"></option>
-                      <option value="Joshua"></option>
-                      <option value="Joellyn"></option>
-                      <option value="BoYan"></option>
-                      <option value="Ray"></option>
-                    </datalist>
+                  <div class="input-group">
+                    <div class="form-floating">
+                      <input
+                        type="search"
+                        class="form-control name-input"
+                        id="name"
+                        placeholder="輸入姓名"
+                        list="people"
+                      />
+                      <label for="name">姓名</label>
+                      <datalist id="people">
+                        <option value="Alice"></option>
+                        <option value="Karen"></option>
+                        <option value="Max"></option>
+                        <option value="Lulu"></option>
+                        <option value="Kelly"></option>
+                        <option value="Jason"></option>
+                        <option value="Cindy"></option>
+                        <option value="Iverson"></option>
+                        <option value="Joshua"></option>
+                        <option value="Joellyn"></option>
+                        <option value="BoYan"></option>
+                        <option value="Ray"></option>
+                      </datalist>
+                    </div>
+                    <button
+                      class="btn btn-outline-secondary"
+                      type="button"
+                      id="showNamePad"
+                    >
+                      選擇
+                    </button>
                   </div>
                 </div>
                 <div class="col-md-5">
                   <div class="form-floating">
                     <input
                       type="text"
-                      class="form-control"
+                      class="form-control numeric-input"
                       id="number"
                       placeholder="輸入證號"
                       inputmode="numeric"
+                      readonly
                     />
                     <label for="number">證號</label>
                   </div>
@@ -98,7 +153,7 @@
                 <i class="bi bi-people"></i> 用戶證號列表
               </h5>
             </div>
-            <div class="card-body p-0">
+            <div class="card-body p-0 pb-1">
               <div class="list-group list-group-flush" id="user-list">
                 <!-- 用戶列表將會顯示在這裡 -->
               </div>
@@ -110,6 +165,120 @@
             <span class="badge bg-secondary" id="connection-status"
               >連接中...</span
             >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 人名按鈕盤 -->
+    <div class="virtual-keyboard" id="namePad">
+      <div class="name-pad">
+        <div class="search-box">
+          <input
+            type="text"
+            class="form-control"
+            id="nameSearch"
+            placeholder="搜尋姓名..."
+            autofocus
+          />
+        </div>
+
+        <div class="text-center" id="nameButtons">
+          <!-- 按鈕會由JavaScript動態生成 -->
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-12">
+            <button class="btn btn-secondary w-100" onclick="hideNamePad()">
+              關閉
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 虛擬鍵盤 -->
+    <div class="virtual-keyboard" id="virtualKeyboard">
+      <div class="number-pad">
+        <div class="text-center">
+          <div class="mb-2">
+            <span class="badge bg-primary" id="currentFieldLabel">證號</span>
+          </div>
+
+          <div class="row g-0 justify-content-center">
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('1')">
+                1
+              </button>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('2')">
+                2
+              </button>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('3')">
+                3
+              </button>
+            </div>
+          </div>
+
+          <div class="row g-0 justify-content-center">
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('4')">
+                4
+              </button>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('5')">
+                5
+              </button>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('6')">
+                6
+              </button>
+            </div>
+          </div>
+
+          <div class="row g-0 justify-content-center">
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('7')">
+                7
+              </button>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('8')">
+                8
+              </button>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('9')">
+                9
+              </button>
+            </div>
+          </div>
+
+          <div class="row g-0 justify-content-center">
+            <div class="col-auto">
+              <button class="btn btn-warning" onclick="clearInput()">C</button>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-light" onclick="appendNumber('0')">
+                0
+              </button>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-danger" onclick="deleteNumber()">←</button>
+            </div>
+          </div>
+
+          <div class="row mt-3">
+            <div class="col-12">
+              <button class="btn btn-secondary w-100" onclick="hideKeyboard()">
+                完成
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -229,22 +398,16 @@
               <div class="col-md-4">
                 <span class="fw-bold">${user.name}</span>
               </div>
-              <div class="col-md-6">
+              <div class="col-md-8">
                 <div class="input-group">
                   <input type="text" class="form-control" value="${user.number}"
                          id="number-${index}" aria-label="證號"
                          onchange="updateNumber('${user.name}', this.value)">
-                  <button class="btn btn-outline-secondary" type="button"
-                          onclick="copyToClipboard('number-${index}')">
-                    <i class="bi bi-clipboard"></i>
+                  <button class="btn btn-sm btn-danger"
+                          onclick="deleteUser('${user.name}')">
+                    <i class="bi bi-trash"></i>
                   </button>
                 </div>
-              </div>
-              <div class="col-md-2 text-end">
-                <button class="btn btn-sm btn-outline-danger"
-                        onclick="deleteUser('${user.name}')">
-                  <i class="bi bi-trash"></i>
-                </button>
               </div>
             </div>
           `;
@@ -268,19 +431,11 @@
         }
       }
 
-      // 複製到剪貼板功能
-      function copyToClipboard(elementId) {
-        const element = document.getElementById(elementId);
-        element.select();
-        document.execCommand("copy");
-        showToast("已複製到剪貼板");
-      }
-
       // 動態創建吐司通知
       function showToast(message, bgClass = "bg-success") {
         // 創建吐司元素
         const toastContainer = document.createElement("div");
-        toastContainer.className = "position-fixed bottom-0 end-0 p-3";
+        toastContainer.className = "toast-container position-fixed bottom-0 end-0 p-3";
         toastContainer.style.zIndex = "5";
 
         const toast = document.createElement("div");
@@ -307,6 +462,162 @@
           document.body.removeChild(toastContainer);
         });
       }
+
+      // 獲取所有人名
+      const nameList = Array.from(
+        document.querySelectorAll("#people option")
+      ).map((option) => option.value);
+      const namePad = document.getElementById("namePad");
+      const nameInput = document.getElementById("name");
+      const nameButtons = document.getElementById("nameButtons");
+      const nameSearch = document.getElementById("nameSearch");
+
+      // 創建人名按鈕
+      function createNameButtons(names) {
+        nameButtons.innerHTML = "";
+
+        // 按鈕分組顯示，一行放3個
+        const rowCount = Math.ceil(names.length / 3);
+
+        for (let i = 0; i < rowCount; i++) {
+          const row = document.createElement("div");
+          row.className = "row g-1 justify-content-center";
+
+          for (let j = 0; j < 3; j++) {
+            const index = i * 3 + j;
+            if (index < names.length) {
+              const col = document.createElement("div");
+              col.className = "col-4";
+
+              const button = document.createElement("button");
+              button.className = "btn btn-light w-100";
+              button.textContent = names[index];
+              button.onclick = function () {
+                nameInput.value = names[index];
+                // 選擇後不關閉，方便用戶更改選擇
+              };
+
+              col.appendChild(button);
+              row.appendChild(col);
+            }
+          }
+
+          nameButtons.appendChild(row);
+        }
+      }
+
+      // 顯示人名按鈕盤
+      document
+        .getElementById("showNamePad")
+        .addEventListener("click", function () {
+          namePad.classList.add("active");
+          createNameButtons(nameList);
+          // setTimeout(() => {
+          //   nameSearch.focus();
+          // }, 300);
+        });
+
+      // 隱藏人名按鈕盤
+      function hideNamePad() {
+        namePad.classList.remove("active");
+        nameSearch.value = "";
+      }
+
+      // 搜尋功能
+      nameSearch.addEventListener("input", function () {
+        const searchText = this.value.toLowerCase();
+        const filteredNames = nameList.filter((name) =>
+          name.toLowerCase().includes(searchText)
+        );
+        createNameButtons(filteredNames);
+      });
+
+      // 點擊頁面其他地方隱藏按鈕盤
+      document.addEventListener("click", function (event) {
+        if (
+          !namePad.contains(event.target) &&
+          !nameInput.contains(event.target) &&
+          !document.getElementById("showNamePad").contains(event.target)
+        ) {
+          hideNamePad();
+        }
+      });
+
+      // 初始化按鈕
+      createNameButtons(nameList);
+
+      // 當前聚焦的輸入框
+      let currentInput = null;
+      const keyboard = document.getElementById("virtualKeyboard");
+      const fieldLabel = document.getElementById("currentFieldLabel");
+
+      // 為所有數字輸入框添加事件
+      const numericInputs = document.querySelectorAll(".numeric-input");
+      numericInputs.forEach((input) => {
+        input.addEventListener("click", function () {
+          currentInput = this;
+          // 顯示當前編輯的欄位名稱
+          const labelElement = document.querySelector(
+            `label[for="${this.id}"]`
+          );
+          if (labelElement) {
+            fieldLabel.textContent = labelElement.textContent;
+          }
+          showKeyboard();
+        });
+      });
+
+      // 顯示鍵盤
+      function showKeyboard() {
+        keyboard.classList.add("active");
+        // 滾動到底部確保輸入框可見
+        setTimeout(() => {
+          window.scrollTo({
+            top:
+              currentInput.getBoundingClientRect().top +
+              window.pageYOffset -
+              150,
+            behavior: "smooth",
+          });
+        }, 300);
+      }
+
+      // 隱藏鍵盤
+      function hideKeyboard() {
+        keyboard.classList.remove("active");
+        currentInput = null;
+      }
+
+      // 添加數字
+      function appendNumber(number) {
+        if (currentInput) {
+          currentInput.value += number;
+        }
+      }
+
+      // 清空輸入
+      function clearInput() {
+        if (currentInput) {
+          currentInput.value = "";
+        }
+      }
+
+      // 刪除最後一個數字
+      function deleteNumber() {
+        if (currentInput) {
+          currentInput.value = currentInput.value.slice(0, -1);
+        }
+      }
+
+      // 點擊頁面其他地方隱藏鍵盤
+      document.addEventListener("click", function (event) {
+        if (
+          !keyboard.contains(event.target) &&
+          ![...numericInputs].some((input) => input.contains(event.target))
+        ) {
+          hideKeyboard();
+        }
+      });
     </script>
 
     <!-- 吐司通知容器 -->
