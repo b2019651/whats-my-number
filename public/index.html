@@ -294,12 +294,34 @@
       const socketUrl = `${protocol}//${window.location.host}`;
       const socket = new WebSocket(socketUrl);
       const connectionStatus = document.getElementById("connection-status");
+      const fingerprint = getCanvasFingerprint();
+
+      // 中介者模式
+      class TaskMediator {
+        constructor() {
+          this.handlers = {};
+        }
+
+        register(task, handler) {
+          this.handlers[task] = handler;
+        }
+
+        handleTask(task, data) {
+          if (this.handlers[task]) {
+            this.handlers[task](data);
+          } else {
+            console.warn(`No handler for task: ${task}`);
+          }
+        }
+      }
 
       // 連接建立時
       socket.addEventListener("open", (event) => {
         connectionStatus.textContent = "已連接";
         connectionStatus.classList.remove("bg-secondary");
         connectionStatus.classList.add("bg-success");
+
+        socket.send(JSON.stringify({ task: "default-user", fingerprint }));
       });
 
       // 連接關閉時
@@ -316,10 +338,23 @@
         connectionStatus.classList.add("bg-danger");
       });
 
+      // 註冊任務處理
+      const mediator = new TaskMediator();
+
+      mediator.register("users", (data) => {
+        updateUserList(data.users);
+      });
+
+      mediator.register("default-user", (data) => {
+        nameInput.value = data.displayName || "";
+      });
+
       // 當伺服器傳送數據時，更新用戶列表
       socket.addEventListener("message", (event) => {
-        const users = JSON.parse(event.data);
-        updateUserList(users);
+        const data = JSON.parse(event.data);
+        const { task } = data;
+
+        mediator.handleTask(task, data);
       });
 
       function getCanvasFingerprint() {
@@ -359,11 +394,12 @@
       function submitNumber() {
         const name = document.getElementById("name").value;
         const number = document.getElementById("number").value;
-        const fingerprint = getCanvasFingerprint();
 
         // 檢查姓名和證號是否有效
         if (name && number) {
-          socket.send(JSON.stringify({ name, number, fingerprint }));
+          socket.send(
+            JSON.stringify({ task: "users", name, number, fingerprint })
+          );
 
           // 清空輸入框
           document.getElementById("name").value = "";
@@ -419,14 +455,16 @@
 
       // 當用戶修改自己的證號時，發送到伺服器
       function updateNumber(name, number) {
-        socket.send(JSON.stringify({ name, number }));
+        socket.send(
+          JSON.stringify({ task: "users", name, number, fingerprint })
+        );
         showToast("證號已更新");
       }
 
       // 刪除用戶（需要後端支持）
       function deleteUser(name) {
         if (confirm(`確定要刪除 ${name} 的資料嗎？`)) {
-          socket.send(JSON.stringify({ action: "delete", name }));
+          socket.send(JSON.stringify({ task: "delete", name }));
           showToast("用戶已刪除");
         }
       }
@@ -435,7 +473,8 @@
       function showToast(message, bgClass = "bg-success") {
         // 創建吐司元素
         const toastContainer = document.createElement("div");
-        toastContainer.className = "toast-container position-fixed bottom-0 end-0 p-3";
+        toastContainer.className =
+          "toast-container position-fixed bottom-0 end-0 p-3";
         toastContainer.style.zIndex = "5";
 
         const toast = document.createElement("div");
