@@ -269,7 +269,9 @@
               </button>
             </div>
             <div class="col-4">
-              <button class="btn btn-warning" onclick="deleteNumber()">←</button>
+              <button class="btn btn-warning" onclick="deleteNumber()">
+                ←
+              </button>
             </div>
           </div>
 
@@ -295,6 +297,7 @@
       const socket = new WebSocket(socketUrl);
       const connectionStatus = document.getElementById("connection-status");
       const fingerprint = getCanvasFingerprint();
+      const isIPhone = /iPhone/i.test(navigator.userAgent);
 
       // 中介者模式
       class TaskMediator {
@@ -593,6 +596,8 @@
       // 為所有數字輸入框添加事件
       const numericInputs = document.querySelectorAll(".numeric-input");
       numericInputs.forEach((input) => {
+        if (isIPhone) return input.removeAttribute("readonly");
+
         input.addEventListener("click", function () {
           currentInput = this;
           // 顯示當前編輯的欄位名稱
