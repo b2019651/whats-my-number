@@ -1,6 +1,7 @@
 require("dotenv").config();
 const WebSocket = require("ws");
 const http = require("http");
+const { URL } = require("url");
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
@@ -48,10 +49,25 @@ class TaskMediator {
   }
 }
 
+const getSortedUsers = (fingerprint) => {
+  const sortedUsers = users.sort((a, b) => {
+    if (a.fingerprint === fingerprint) return -1;
+    if (b.fingerprint === fingerprint) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return (fingerprint ? sortedUsers : users).map(({ name, number }) => ({
+    name,
+    number,
+  }));
+};
+
 // 發送更新給所有已連線的用戶
 const syncAllUsers = () => {
   wss.clients.forEach((client) => {
     if (client.readyState !== WebSocket.OPEN) return;
+
+    const users = getSortedUsers(client.fingerprint);
 
     client.send(JSON.stringify({ task: "users", users }));
   });
@@ -110,7 +126,7 @@ mediator.register("users", (data, ws) => {
     users[userIndex].number = number;
   } else {
     // 新用戶，加入名單
-    users.push({ name, number });
+    users.push({ name, number, fingerprint });
   }
 
   // UPSERT
@@ -133,7 +149,13 @@ mediator.register("default-user", async (data, ws) => {
   ws.send(JSON.stringify({ task: "default-user", displayName }));
 });
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
+  const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
+
+  ws.fingerprint = params.get("fingerprint");
+
+  const users = getSortedUsers(ws.fingerprint);
+
   // 當有新用戶連線時，會把目前所有用戶號碼資料發送給新用戶
   ws.send(JSON.stringify({ task: "users", users }));
 

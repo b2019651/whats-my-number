@@ -36,12 +36,12 @@
         white-space: nowrap;
       }
       .number-pad {
-        max-width: 400px;
+        max-width: 320px;
         margin: 0 auto;
       }
       .number-pad .btn {
         width: 100px;
-        height: 70px;
+        height: 60px;
         margin: 5px;
         font-size: 1.5rem;
         font-weight: bold;
@@ -291,12 +291,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
     <script>
+      const fingerprint = getCanvasFingerprint();
       // 連線 WebSocket 伺服器 - 使用與網頁相同的主機和端口
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const socketUrl = `${protocol}//${window.location.host}`;
+      const socketUrl = `${protocol}//${window.location.host}?fingerprint=${fingerprint}`;
       const socket = new WebSocket(socketUrl);
       const connectionStatus = document.getElementById("connection-status");
-      const fingerprint = getCanvasFingerprint();
       const isIPhone = /iPhone/i.test(navigator.userAgent);
 
       // 中介者模式
