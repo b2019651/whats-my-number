@@ -50,7 +50,8 @@ class TaskMediator {
 }
 
 const getSortedUsers = (fingerprint) => {
-  const sortedUsers = users.sort((a, b) => {
+  const usersCopy = [...users];
+  const sortedUsers = usersCopy.sort((a, b) => {
     if (a.fingerprint === fingerprint) return -1;
     if (b.fingerprint === fingerprint) return 1;
     return a.name.localeCompare(b.name);
