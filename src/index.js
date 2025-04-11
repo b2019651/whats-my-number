@@ -5,7 +5,7 @@ const { URL } = require("url");
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
-const { Client } = require("pg");
+const mongoose = require("mongoose");
 
 // 創建Express應用
 const app = express();
@@ -23,12 +23,14 @@ const wss = new WebSocket.Server({ server });
 // 儲存用戶及其號碼
 let users = [];
 
-const client = new Client({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+mongoose.connect(process.env.DATABASE_URL);
+
+const deviceProfileSchema = new mongoose.Schema({
+  Fingerprint: { type: String, unique: true },
+  DisplayName: String,
 });
 
-client.connect();
+const DeviceProfile = mongoose.model("DeviceProfile", deviceProfileSchema);
 
 // 中介者模式
 class TaskMediator {
@@ -85,15 +87,12 @@ function deleteUser(name) {
 }
 
 async function upsertDeviceProfile(uuid, user) {
-  const query = `
-    INSERT INTO "DeviceProfiles" ("Fingerprint", "DisplayName")
-    VALUES ($1, $2)
-    ON CONFLICT ("Fingerprint") DO UPDATE
-    SET "DisplayName" = EXCLUDED."DisplayName";
-  `;
-
   try {
-    await client.query(query, [uuid, user]);
+    await DeviceProfile.updateOne(
+      { Fingerprint: uuid },
+      { $set: { DisplayName: user } },
+      { upsert: true }
+    );
     console.log("Upsert 成功");
   } catch (error) {
     console.error("Upsert 失敗", error);
@@ -101,13 +100,9 @@ async function upsertDeviceProfile(uuid, user) {
 }
 
 async function getDisplayName(uuid) {
-  const query = `
-    SELECT "DisplayName" FROM "DeviceProfiles" WHERE "Fingerprint" = $1;
-  `;
   try {
-    const result = await client.query(query, [uuid]);
-
-    return result.rows[0].DisplayName;
+    const profile = await DeviceProfile.findOne({ Fingerprint: uuid }).lean();
+    return profile?.DisplayName || null;
   } catch (error) {
     console.error("getDisplayName 失敗", error);
   }
@@ -180,5 +175,5 @@ server.listen(PORT, () => {
 
 process.on("SIGINT", async () => {
   console.log("應用關閉中");
-  await client.end();
+  await mongoose.disconnect();
 });
